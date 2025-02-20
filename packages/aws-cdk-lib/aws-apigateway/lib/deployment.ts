@@ -74,7 +74,7 @@ export class Deployment extends Resource {
   /**
    * Uniquely identifies this class.
    */
-  public static readonly UNIQUE_FQN = 'aws-cdk-lib.aws-apigateway.Deployment';
+  public static readonly UNIQUE_FQN: string = 'aws-cdk-lib.aws-apigateway.Deployment';
 
   /** @attribute */
   public readonly deploymentId: string;

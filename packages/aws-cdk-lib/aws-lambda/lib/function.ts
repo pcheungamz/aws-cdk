@@ -645,7 +645,7 @@ export class Function extends FunctionBase {
   /**
    * Uniquely identifies this class.
    */
-  public static readonly UNIQUE_FQN = 'aws-cdk-lib.aws-lambda.Function';
+  public static readonly UNIQUE_FQN: string = 'aws-cdk-lib.aws-lambda.Function';
 
   /**
    * Returns a `lambda.Version` which represents the current version of this

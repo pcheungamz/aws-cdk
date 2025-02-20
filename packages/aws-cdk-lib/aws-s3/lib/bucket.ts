@@ -1969,7 +1969,7 @@ export class Bucket extends BucketBase {
   /**
    * Uniquely identifies this class.
    */
-  public static readonly UNIQUE_FQN = 'aws-cdk-lib.aws-s3.Bucket';
+  public static readonly UNIQUE_FQN: string = 'aws-cdk-lib.aws-s3.Bucket';
 
   public static fromBucketArn(scope: Construct, id: string, bucketArn: string): IBucket {
     return Bucket.fromBucketAttributes(scope, id, { bucketArn });

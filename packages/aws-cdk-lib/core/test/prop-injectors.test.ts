@@ -1,4 +1,5 @@
-import { Function } from '../../aws-lambda';
+import { Key } from '../../aws-kms';
+import { Code, Function, Runtime } from '../../aws-lambda';
 import { BlockPublicAccess, Bucket, BucketProps } from '../../aws-s3';
 import { Stack, Stage } from '../lib';
 import { App } from '../lib/app';
@@ -42,7 +43,7 @@ describe('PropertyInjectors Attachment', () => {
     mock.mockRestore();
   });
 
-  test('Attach PropertyInjectors to Stake', () => {
+  test('Attach PropertyInjectors to Stack', () => {
     // GIVEN
     const mock = jest.spyOn(PropertyInjectors.prototype, 'add').mockImplementation();
 
@@ -55,6 +56,22 @@ describe('PropertyInjectors Attachment', () => {
 
     // THEN
     expect(mock).toHaveBeenCalledWith(dnFunction);
+
+    mock.mockRestore();
+  });
+
+  test('Attach PropertyInjectors to Stack without Stage', () => {
+    // GIVEN
+    const mock = jest.spyOn(PropertyInjectors.prototype, 'add').mockImplementation();
+
+    // WHEN
+    const app = new App();
+    new Stack(app, 'MyStack', {
+      propertyInjectors: [dnBucket],
+    });
+
+    // THEN
+    expect(mock).toHaveBeenCalledWith(dnBucket);
 
     mock.mockRestore();
   });
@@ -89,7 +106,10 @@ describe('PropertyInjectors Tree Traversal', () => {
       propertyInjectors: [dnBucket],
     });
     const stack = new Stack(app, 'MyStack', {
-      propertyInjectors: [bucketInjector],
+      propertyInjectors: [
+        bucketInjector,
+        dnKey,
+      ],
     });
     const props: BucketProps = {
       blockPublicAccess: BlockPublicAccess.BLOCK_ACLS,
@@ -105,6 +125,88 @@ describe('PropertyInjectors Tree Traversal', () => {
     expect(newProps).toEqual({
       blockPublicAccess: BlockPublicAccess.BLOCK_ACLS,
       enforceSSL: true,
+    });
+  });
+
+  test('PropertyInjectors use stage over app', () => {
+    // GIVEN
+    const app = new App({
+      propertyInjectors: [dnBucket],
+    });
+    const stage = new Stage(app, 'MyStage', {
+      propertyInjectors: [bucketInjector],
+    });
+    const stack = new Stack(stage, 'MyStack', {
+      propertyInjectors: [
+        dnFunction,
+        dnKey,
+      ],
+    });
+    const props: BucketProps = {
+    };
+
+    // WHEN
+    const newProps = applyInjectors(Bucket.UNIQUE_FQN, props, {
+      scope: stack,
+      id: 'TestBucket',
+    });
+
+    // THEN
+    expect(newProps).toEqual({
+      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      enforceSSL: true,
+    });
+  });
+
+  test('PropertyInjectors in Function scope', () => {
+    // GIVEN
+    const app = new App({
+      propertyInjectors: [dnBucket],
+    });
+    const stack = new Stack(app, 'MyStack', {
+      propertyInjectors: [
+        dnFunction,
+        dnKey,
+      ],
+    });
+    const fn = new Function(stack, 'MyFunc', {
+      runtime: Runtime.NODEJS_20_X, // Provide any supported Node.js runtime
+      handler: 'index.handler',
+      code: Code.fromInline(`
+        exports.handler = async function(event) {
+          return {
+            statusCode: 200,
+            body: JSON.stringify('Hello World!'),
+          };
+        };
+      `),
+    });
+    PropertyInjectors.of(fn).add(bucketInjector);
+    const props: BucketProps = {
+      blockPublicAccess: undefined,
+    };
+
+    // WHEN
+    const newProps = applyInjectors(Bucket.UNIQUE_FQN, props, {
+      scope: fn,
+      id: 'TestBucket',
+    });
+
+    // THEN
+    expect(newProps).toEqual({
+      blockPublicAccess: undefined,
+      enforceSSL: true,
+    });
+
+    // WHEN
+    const newProps2 = applyInjectors(Bucket.UNIQUE_FQN, props, {
+      scope: stack,
+      id: 'TestBucket',
+    });
+
+    // THEN
+    expect(newProps2).toEqual({
+      blockPublicAccess: undefined,
     });
   });
 });
@@ -153,6 +255,33 @@ describe('Bucket Injector', () => {
       enforceSSL: true,
     });
   });
+
+  test('Use original values and injector default', () => {
+    // GIVEN
+    const app = new App({
+      propertyInjectors: [
+        bucketInjector,
+        dnFunction,
+        dnKey,
+      ],
+    });
+    const stack = new Stack(app, 'MyStack', {});
+    const props: BucketProps = {
+      blockPublicAccess: BlockPublicAccess.BLOCK_ACLS,
+    };
+
+    // WHEN
+    const newProps = applyInjectors(Bucket.UNIQUE_FQN, props, {
+      scope: stack,
+      id: 'TestBucket',
+    });
+
+    // THEN
+    expect(newProps).toEqual({
+      blockPublicAccess: BlockPublicAccess.BLOCK_ACLS,
+      enforceSSL: true,
+    });
+  });
 });
 
 class DoNothingInjector implements IPropertyInjector {
@@ -169,6 +298,7 @@ class DoNothingInjector implements IPropertyInjector {
 
 const dnBucket = new DoNothingInjector(Bucket.UNIQUE_FQN);
 const dnFunction = new DoNothingInjector(Function.UNIQUE_FQN);
+const dnKey = new DoNothingInjector(Key.UNIQUE_FQN);
 
 class MyBucketPropsInjector implements IPropertyInjector {
   public readonly constructFqn: string;

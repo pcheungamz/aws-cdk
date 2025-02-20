@@ -121,7 +121,7 @@ export class DomainName extends Resource implements IDomainName {
   /**
    * Uniquely identifies this class.
    */
-  public static readonly UNIQUE_FQN = 'aws-cdk-lib.aws-apigateway.DomainName';
+  public static readonly UNIQUE_FQN: string = 'aws-cdk-lib.aws-apigateway.DomainName';
 
   /**
    * Imports an existing domain name.
