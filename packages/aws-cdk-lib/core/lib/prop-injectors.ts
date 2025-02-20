@@ -29,7 +29,7 @@ export interface IPropertyInjector {
   /**
    * The unique FQN of the Construct class.
    */
-  constructFqn: string;
+  readonly constructFqn: string;
 
   /**
    * The injector to be applied to the constructor properties of the Construct.
@@ -82,12 +82,12 @@ export class PropertyInjectors {
    * @param propsInjectors - a list of IPropertyInjector
    */
   public add(...propsInjectors: IPropertyInjector[]) {
-    // const fqnKey: string = (propsInjector.cls as any)?.[Symbol.for('jsii.rtti')]?.fqn;
     for (const pi of propsInjectors) {
       if (this._injectors.has(pi.constructFqn)) {
         warn(`WARN: Overwriting injector for ${pi.constructFqn}`);
       }
       this._injectors.set(pi.constructFqn, pi);
+      log(`added: ${pi.constructFqn}`);
     }
   }
 

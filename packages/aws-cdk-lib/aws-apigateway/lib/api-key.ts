@@ -8,6 +8,7 @@ import * as iam from '../../aws-iam';
 import { ArnFormat, IResource as IResourceBase, Resource, Stack } from '../../core';
 import { ValidationError } from '../../core/lib/errors';
 import { addConstructMetadata } from '../../core/lib/metadata-resource';
+import { applyInjectors } from '../../core/lib/prop-injectors';
 
 /**
  * API keys are alphanumeric string values that you distribute to
@@ -147,6 +148,11 @@ abstract class ApiKeyBase extends Resource implements IApiKey {
  */
 export class ApiKey extends ApiKeyBase {
   /**
+   * Uniquely identifies this class.
+   */
+  public static readonly UNIQUE_FQN = 'aws-cdk-lib.aws-apigateway.ApiKey';
+
+  /**
    * Import an ApiKey by its Id
    */
   public static fromApiKeyId(scope: Construct, id: string, apiKeyId: string): IApiKey {
@@ -168,6 +174,12 @@ export class ApiKey extends ApiKeyBase {
   public readonly keyArn: string;
 
   constructor(scope: Construct, id: string, props: ApiKeyProps = { }) {
+    // Blueprint Property Injection
+    props = applyInjectors(ApiKey.UNIQUE_FQN, props, {
+      scope,
+      id,
+    });
+
     super(scope, id, {
       physicalName: props.apiKeyName,
     });
