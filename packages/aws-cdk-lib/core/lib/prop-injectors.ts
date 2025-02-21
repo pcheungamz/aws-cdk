@@ -29,7 +29,7 @@ export interface IPropertyInjector {
   /**
    * The unique FQN of the Construct class.
    */
-  constructFqn: string;
+  readonly constructFqn: string;
 
   /**
    * The injector to be applied to the constructor properties of the Construct.
@@ -82,12 +82,12 @@ export class PropertyInjectors {
    * @param propsInjectors - a list of IPropertyInjector
    */
   public add(...propsInjectors: IPropertyInjector[]) {
-    // const fqnKey: string = (propsInjector.cls as any)?.[Symbol.for('jsii.rtti')]?.fqn;
     for (const pi of propsInjectors) {
       if (this._injectors.has(pi.constructFqn)) {
         warn(`WARN: Overwriting injector for ${pi.constructFqn}`);
       }
       this._injectors.set(pi.constructFqn, pi);
+      log(`added: ${pi.constructFqn}`);
     }
   }
 
@@ -126,22 +126,27 @@ export class PropertyInjectors {
  */
 export function applyInjectors(fqn: string, originalProps: any, context: InjectionContext): any {
   // find the PropertyInjectors from scope
+  let injectors;
   try {
-    const injectors = findInjectorsFromConstruct(context.scope, fqn);
-
-    const propsInjector = injectors.for(fqn);
-    if (propsInjector) {
-      return propsInjector.inject(originalProps, {
-        scope: context.scope,
-        id: context.id,
-      });
-    } else {
-      warn(`no injector found for ${fqn} at ${context.scope}`);
-    }
+    injectors = findInjectorsFromConstruct(context.scope, fqn);
   } catch (err) {
     // this happens when no PropertyInjector is found in the scope tree
     warn('No PropertyInjector found in the scope tree');
+    return originalProps;
   }
+
+  // Find the injector for the Construct and apply it.
+  const propsInjector = injectors.for(fqn);
+  if (propsInjector) {
+    // Any errors that inject throws will be surfaced.
+    return propsInjector.inject(originalProps, {
+      scope: context.scope,
+      id: context.id,
+    });
+  } else {
+    warn(`no injector found for ${fqn} at ${context.scope}`);
+  }
+
   return originalProps;
 }
 

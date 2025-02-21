@@ -1,3 +1,4 @@
+import { log } from 'console';
 import { Construct } from 'constructs';
 import * as fs from 'fs-extra';
 import { PRIVATE_CONTEXT_DEFAULT_STACK_SYNTHESIZER } from './private/private-context';
@@ -177,9 +178,11 @@ export class App extends Stage {
       policyValidationBeta1: props.policyValidationBeta1,
     });
 
+    log('In Stack ctor');
     if (props.propertyInjectors) {
       const injectors = PropertyInjectors.of(this);
       injectors.add(...props.propertyInjectors);
+      log(`supportedClasses: ${injectors.supportedClasses()}`);
     }
 
     Object.defineProperty(this, APP_SYMBOL, { value: true });
