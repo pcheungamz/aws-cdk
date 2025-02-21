@@ -1,3 +1,4 @@
+import { error } from 'console';
 import { Key } from '../../aws-kms';
 import { Code, Function, Runtime } from '../../aws-lambda';
 import { BlockPublicAccess, Bucket, BucketProps } from '../../aws-s3';
@@ -282,6 +283,40 @@ describe('Bucket Injector', () => {
       enforceSSL: true,
     });
   });
+
+  test('Injector throws error', () => {
+    // GIVEN
+    const app = new App({
+      propertyInjectors: [
+        errorBucketInjector,
+      ],
+    });
+    const stack = new Stack(app, 'MyStack', {});
+
+    expect(() => {
+      // WHEN
+      const props: BucketProps = {
+        enforceSSL: false,
+      };
+
+      applyInjectors(Bucket.UNIQUE_FQN, props, {
+        scope: stack,
+        id: 'TestBucket',
+      });
+    }).toThrow('SSL should be set to true'); // THEN
+
+    // WHEN
+    const props2: BucketProps = {
+      enforceSSL: true,
+    };
+    const newProps = applyInjectors(Bucket.UNIQUE_FQN, props2, {
+      scope: stack,
+      id: 'TestBucket',
+    });
+
+    // THEN
+    expect(newProps).toEqual(props2);
+  });
 });
 
 class DoNothingInjector implements IPropertyInjector {
@@ -318,3 +353,20 @@ class MyBucketPropsInjector implements IPropertyInjector {
 }
 
 const bucketInjector = new MyBucketPropsInjector();
+
+class ErrorBucketPropsInjector implements IPropertyInjector {
+  public readonly constructFqn: string;
+
+  constructor() {
+    this.constructFqn = Bucket.UNIQUE_FQN;
+  }
+
+  inject(originalProps: any, _context: InjectionContext): any {
+    if (originalProps.enforceSSL === false) {
+      throw new Error('SSL should be set to true');
+    }
+    return originalProps;
+  }
+}
+
+const errorBucketInjector = new ErrorBucketPropsInjector();

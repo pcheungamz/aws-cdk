@@ -126,22 +126,27 @@ export class PropertyInjectors {
  */
 export function applyInjectors(fqn: string, originalProps: any, context: InjectionContext): any {
   // find the PropertyInjectors from scope
+  let injectors;
   try {
-    const injectors = findInjectorsFromConstruct(context.scope, fqn);
-
-    const propsInjector = injectors.for(fqn);
-    if (propsInjector) {
-      return propsInjector.inject(originalProps, {
-        scope: context.scope,
-        id: context.id,
-      });
-    } else {
-      warn(`no injector found for ${fqn} at ${context.scope}`);
-    }
+    injectors = findInjectorsFromConstruct(context.scope, fqn);
   } catch (err) {
     // this happens when no PropertyInjector is found in the scope tree
     warn('No PropertyInjector found in the scope tree');
+    return originalProps;
   }
+
+  // Find the injector for the Construct and apply it.
+  const propsInjector = injectors.for(fqn);
+  if (propsInjector) {
+    // Any errors that inject throws will be surfaced.
+    return propsInjector.inject(originalProps, {
+      scope: context.scope,
+      id: context.id,
+    });
+  } else {
+    warn(`no injector found for ${fqn} at ${context.scope}`);
+  }
+
   return originalProps;
 }
 
